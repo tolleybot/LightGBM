@@ -14,7 +14,7 @@
 
 #include "../io/dense_bin.hpp"
 
-#define GPU_DEBUG 0
+#define GPU_DEBUG 0 // TODO: DON set to 5 to get tons of debug output
 
 namespace LightGBM {
 
@@ -165,6 +165,7 @@ void GPUTreeLearner::GPUHistogram(data_size_t leaf_num_data, bool use_all_featur
   // and we will launch num_feature workgroups for this kernel
   // will launch threads for all features
   // the queue should be asynchronous, and we will can WaitAndGetHistograms() before we start processing dense feature groups
+
   if (leaf_num_data == num_data_) {
     kernel_wait_obj_ = boost::compute::wait_list(
       queue_.enqueue_1d_range_kernel(histogram_fulldata_kernels_[exp_workgroups_per_feature], 0, num_workgroups * 256, 256));
@@ -177,6 +178,8 @@ void GPUTreeLearner::GPUHistogram(data_size_t leaf_num_data, bool use_all_featur
         queue_.enqueue_1d_range_kernel(histogram_kernels_[exp_workgroups_per_feature], 0, num_workgroups * 256, 256));
     }
   }
+
+
   // copy the results asynchronously. Size depends on if double precision is used
   size_t output_size = num_dense_feature4_ * dword_features_ * device_bin_size_ * hist_bin_entry_sz_;
   boost::compute::event histogram_wait_event;
@@ -1089,7 +1092,7 @@ void GPUTreeLearner::FindBestSplits(const Tree* tree) {
     size_t bin_size = train_data_->FeatureNumBin(feature_index) + 1;
     printf("Feature %d smaller leaf:\n", feature_index);
     PrintHistograms(smaller_leaf_histogram_array_[feature_index].RawData() - kHistOffset, bin_size);
-    if (larger_leaf_splits_ == nullptr || larger_leaf_splits_->LeafIndex() < 0) { continue; }
+    if (larger_leaf_splits_ == nullptr || larger_leaf_splits_->leaf_index() < 0) { continue; }
     printf("Feature %d larger leaf:\n", feature_index);
     PrintHistograms(larger_leaf_histogram_array_[feature_index].RawData() - kHistOffset, bin_size);
   }

@@ -24,7 +24,7 @@ class CUDASplitInfo {
 
   double left_sum_gradients;
   double left_sum_hessians;
-  data_size_t left_count;
+  data_size_t left_count; // TODO: DON check if this needs to be int64_t instead of int32_t
   double left_gain;
   double left_value;
 

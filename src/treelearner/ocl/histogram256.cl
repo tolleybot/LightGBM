@@ -293,7 +293,7 @@ void within_kernel_reduction256x4(uchar4 feature_mask,
     /*
     for (ushort i = ltid; i < 2 * 3 * NUM_BINS; i += lsize) {
         output_buf[i + 2 * 3 * NUM_BINS] = local_hist[i];
-    }
+    }    
     */
     i = ltid;
     if (feature_mask.s2) {
@@ -334,7 +334,7 @@ __kernel void histogram256(__global const uchar4* feature_data_base,
                       const data_size_t feature_size,
                       __global const data_size_t* data_indices, 
                       const data_size_t num_data, 
-                      __global const score_t*  ordered_gradients, 
+                      __global const *  ordered_gradients, 
 #if CONST_HESSIAN == 0
                       __global const score_t*  ordered_hessians,
 #else
@@ -344,14 +344,91 @@ __kernel void histogram256(__global const uchar4* feature_data_base,
                       __global volatile int * sync_counters,
                       __global acc_type* restrict hist_buf_base) {
 #endif
+    // output_buf == device_subhistograms_
+    // sync_counters == sync_counters_
+    // hist_buf_base == device_hidevice_histogram_outputs_
+
+    const ushort group_id = get_group_id(0);
+    const uint global_id = get_global_id(0);
+ #if 0
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Print the input values with workgroup ID and global ID
+    printf("group %hu, global %lu: feature_size: %u\n", group_id, global_id, (uint)feature_size);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    printf("group %hu, global %lu: num_data: %u\n", group_id, global_id, (uint)num_data);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    #if CONST_HESSIAN == 1
+        printf("group %hu, global %lu: const_hessian: %f\n", group_id, global_id, const_hessian);
+    #endif
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Print the contents of feature_data_base buffer with workgroup ID and global ID
+    for(data_size_t i = 0; i < feature_size; i++) {
+        uchar4 value = feature_data_base[i];
+        printf("group %hu, global %lu: feature_data_base[%u]: (%u, %u, %u, %u)\n", group_id, global_id, i, value.x, value.y, value.z, value.w);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+
+    // Print the contents of data_indices buffer with workgroup ID and global ID
+    
+    for(data_size_t i = 0; i < num_data; i++) {
+        data_size_t value = data_indices[i];    
+        printf("group %hu, global %lu: data_indices[%u]: %d\n", group_id, global_id, i, (uint)value);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+  
+    // Print the contents of ordered_gradients buffer with workgroup ID and global ID
+    for(data_size_t i = 0; i < num_data; i++) {
+        score_t value = ordered_gradients[i];    
+        printf("group %hu, global %lu: ordered_gradients[%u]: %f\n", group_id, global_id, i, value);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Print the contents of feature_masks constant buffer with workgroup ID and global ID
+    for(data_size_t i = 0; i < feature_size; i++) {
+        uchar4 value = feature_masks[i];    
+        printf("group %hu, global %lu: feature_masks[%u]: (%u, %u, %u, %u)\n", group_id, global_id, i, value.x, value.y, value.z, value.w);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+#if 0
+    // Print the contents of output_buf buffer with workgroup ID and global ID
+    for(data_size_t i = 0; i < feature_size; i++) {
+        char value = output_buf[i];    
+        printf("group %hu, global %lu: output_buf[%u]: %d\n", group_id, global_id, i, value);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Print the contents of sync_counters buffer with workgroup ID and global ID
+    for(data_size_t i = 0; i < num_data; i++) {
+        int value = sync_counters[i];      
+        printf("group %hu, global %lu: sync_counters[%u]: %d\n", group_id, global_id, i, value);
+    }
+    
+    barrier(CLK_LOCAL_MEM_FENCE);
+ 
+    // Print the contents of hist_buf_base buffer with workgroup ID and unique ID
+    for(data_size_t i = 0; i < feature_size; i++) {
+        acc_type value = hist_buf_base[i];
+        barrier(CLK_LOCAL_MEM_FENCE);
+        printf("group %hu : hist_buf_base[%u]: %lf\n", group_id, i, value);
+    }  
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+
+    
     // allocate the local memory array aligned with float2, to guarantee correct alignment on NVIDIA platforms
     // otherwise a "Misaligned Address" exception may occur
     __local float2 shared_array[LOCAL_MEM_SIZE/sizeof(float2)];
-    const uint gtid = get_global_id(0);
+    const uint gtid = global_id;
     const uint gsize = get_global_size(0);
     const ushort ltid = get_local_id(0);
     const ushort lsize = LOCAL_SIZE_0; // get_local_size(0);
-    const ushort group_id = get_group_id(0);
+
 
     // local memory per workgroup is 12 KB
     // clear local memory
@@ -784,6 +861,26 @@ R""()
         // if (ltid == 0) 
         //    printf("workgroup %d reduction done, %g %g %g %g %g %g %g %g\n", group_id, hist_buf[0], hist_buf[3*NUM_BINS], hist_buf[2*3*NUM_BINS], hist_buf[3*3*NUM_BINS], hist_buf[1], hist_buf[3*NUM_BINS+1], hist_buf[2*3*NUM_BINS+1], hist_buf[3*3*NUM_BINS+1]);
     }
+
+ #if 0
+    // Print the contents of output_buf buffer with workgroup ID and unique ID
+    for(int i = 0; i < feature_size; i++) {
+        char value = output_buf[i];
+        printf("output: group %hu, unique_id %llu: output_buf[%d]: %d\n", group_id, unique_id, i, value);
+    }
+
+    // Print the contents of sync_counters buffer with workgroup ID and unique ID
+    for(int i = 0; i < num_data; i++) {
+        int value = sync_counters[i];
+        printf("output: group %hu, unique_id %llu: sync_counters[%d]: %d\n", group_id, unique_id, i, value);
+    }
+
+    // Print the contents of hist_buf_base buffer with workgroup ID and unique ID
+    for(int i = 0; i < feature_size; i++) {
+        acc_type value = hist_buf_base[i];
+        printf("output: group %hu, unique_id %llu: hist_buf_base[%d]: %lf\n", group_id, unique_id, i, value);
+    }
+#endif
 }
 
 // The following line ends the string literal, adds an extra #endif at the end

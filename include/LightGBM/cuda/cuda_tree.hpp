@@ -152,7 +152,7 @@ class CUDATree : public Tree {
   double* cuda_internal_value_;
   int8_t* cuda_decision_type_;
   double* cuda_leaf_value_;
-  data_size_t* cuda_leaf_count_;
+  data_size_t* cuda_leaf_count_; // TODO: DON check data type size
   double* cuda_leaf_weight_;
   data_size_t* cuda_internal_count_;
   float* cuda_split_gain_;

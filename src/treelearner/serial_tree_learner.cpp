@@ -618,8 +618,14 @@ void SerialTreeLearner::SplitInner(Tree* tree, int best_leaf, int* left_leaf,
                            best_split_info.default_left, next_leaf_id);
     if (update_cnt) {
       // don't need to update this in data-based parallel model
-      best_split_info.left_count = data_partition_->leaf_count(*left_leaf);
-      best_split_info.right_count = data_partition_->leaf_count(next_leaf_id);
+       data_size_t left_count = data_partition_->leaf_count(*left_leaf);
+       data_size_t right_count = data_partition_->leaf_count(next_leaf_id);
+       if (left_count == 0 && best_split_info.left_count > 0 && right_count > 1000) {
+         printf("Left count is 0, but best_split_info.left_count is %d, right_count is %d",
+                    best_split_info.left_count, right_count);
+       };
+       best_split_info.left_count = left_count;
+       best_split_info.right_count = right_count;
     }
     // split tree, will return right leaf
     *right_leaf = tree->Split(
@@ -654,8 +660,14 @@ void SerialTreeLearner::SplitInner(Tree* tree, int best_leaf, int* left_leaf,
 
     if (update_cnt) {
       // don't need to update this in data-based parallel model
-      best_split_info.left_count = data_partition_->leaf_count(*left_leaf);
-      best_split_info.right_count = data_partition_->leaf_count(next_leaf_id);
+       data_size_t left_count = data_partition_->leaf_count(*left_leaf);
+       data_size_t right_count = data_partition_->leaf_count(next_leaf_id);
+        if (left_count == 0 && best_split_info.left_count > 0 && right_count > 1000) {
+         Log::Fatal("B) Left count is 0, but best_split_info.left_count is %d, right_count is %d",
+                    best_split_info.left_count, right_count);
+       };
+       best_split_info.left_count = left_count;
+       best_split_info.right_count = right_count;
     }
 
     *right_leaf = tree->SplitCategorical(
