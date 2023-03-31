@@ -334,7 +334,7 @@ __kernel void histogram256(__global const uchar4* feature_data_base,
                       const data_size_t feature_size,
                       __global const data_size_t* data_indices, 
                       const data_size_t num_data, 
-                      __global const *  ordered_gradients, 
+                      __global const *  ordered_gradients,  // TODO: DIB everything worked when this was defined as  __global const *  ordered_gradients
 #if CONST_HESSIAN == 0
                       __global const score_t*  ordered_hessians,
 #else
